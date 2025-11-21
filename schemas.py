@@ -1,48 +1,80 @@
 """
-Database Schemas
+Database Schemas for JustPlay League Manager
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
+Pydantic models below describe the core domain. Each class name maps to a
+collection name using its lowercase form if/when persistence is enabled.
 
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+This initial release uses mocked data served by the API, but schemas are
+defined up-front so we can seamlessly switch to MongoDB persistence later.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, HttpUrl
+from typing import Optional, List, Literal
+from datetime import date, datetime
 
-# Example schemas (replace with your own):
+SportType = Literal["basketball"]
 
-class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+class Player(BaseModel):
+    id: str = Field(..., description="Unique player id")
+    name: str
+    avatar: Optional[HttpUrl] = None
+    position: Optional[str] = None
 
-# Add your own schemas here:
-# --------------------------------------------------
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class Team(BaseModel):
+    id: str
+    name: str
+    avatar: Optional[HttpUrl] = None
+    players: List[Player] = []
+
+
+class Member(BaseModel):
+    id: str
+    name: str
+    role: Literal["organizer", "member"] = "member"
+    joined_at: datetime
+
+
+class League(BaseModel):
+    id: str
+    code: str = Field(..., description="Short code used to join league")
+    name: str
+    description: Optional[str] = None
+    sport: SportType = "basketball"
+    location: Optional[str] = None
+    start_date: Optional[date] = None
+    avatar: Optional[HttpUrl] = None
+    allow_free_join: bool = True
+    number_of_teams: Optional[int] = None
+    organizer: Member
+    teams: List[Team] = []
+    members: List[Member] = []
+
+
+class Match(BaseModel):
+    id: str
+    league_id: str
+    round: int
+    home_team_id: str
+    away_team_id: str
+    court: Optional[str] = None
+    scheduled_at: datetime
+    home_score: Optional[int] = None
+    away_score: Optional[int] = None
+
+
+class CreateLeagueRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+    sport: SportType = "basketball"
+    location: Optional[str] = None
+    start_date: Optional[date] = None
+    avatar: Optional[HttpUrl] = None
+    number_of_teams: Optional[int] = None
+    allow_free_join: bool = True
+    organizer_name: str
+
+
+class JoinLeagueRequest(BaseModel):
+    name: str
